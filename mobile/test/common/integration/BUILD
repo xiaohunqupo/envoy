@@ -14,10 +14,6 @@ envoy_mobile_package()
 envoy_cc_test(
     name = "client_integration_test",
     srcs = ["client_integration_test.cc"],
-    exec_properties = {
-        # TODO(willengflow): Remove this once the sandboxNetwork=off works for ipv4 localhost addresses.
-        "sandboxNetwork": "standard",
-    },
     linkopts = select({
         "@envoy//bazel:apple": [
             # For the TestProxyResolutionApi test.
@@ -38,6 +34,7 @@ envoy_cc_test(
         "@envoy//source/common/quic:quic_transport_socket_factory_lib",
         "@envoy//source/common/quic:udp_gso_batch_writer_lib",
         "@envoy//source/extensions/udp_packet_writer/gso:config",
+        "@envoy//test/extensions/filters/http/dynamic_forward_proxy:test_resolver_lib",
         "@envoy//test/test_common:test_random_generator_lib",
     ],
 )
@@ -51,10 +48,6 @@ envoy_cc_test(
     data = [
         "@envoy//test/config/integration/certs",
     ],
-    exec_properties = {
-        # TODO(willengflow): Remove this once the sandboxNetwork=off works for ipv4 localhost addresses.
-        "sandboxNetwork": "standard",
-    },
     external_deps = [
         "abseil_strings",
     ],
@@ -78,10 +71,6 @@ envoy_cc_test(
     data = [
         "@envoy//test/config/integration/certs",
     ],
-    exec_properties = {
-        # TODO(willengflow): Remove this once the sandboxNetwork=off works for ipv4 localhost addresses.
-        "sandboxNetwork": "standard",
-    },
     external_deps = [
         "abseil_strings",
     ],
@@ -104,10 +93,6 @@ envoy_cc_test(
     data = [
         "@envoy//test/config/integration/certs",
     ],
-    exec_properties = {
-        # TODO(willengflow): Remove this once the sandboxNetwork=off works for ipv4 localhost addresses.
-        "sandboxNetwork": "standard",
-    },
     repository = "@envoy",
     deps = [
         ":xds_integration_test_lib",
@@ -234,4 +219,19 @@ envoy_cc_test_library(
         ["@envoy//source/common/signal:sigaction_lib"],
         "@envoy",
     ),
+)
+
+envoy_cc_test_library(
+    name = "engine_with_test_server",
+    srcs = [
+        "engine_with_test_server.cc",
+    ],
+    hdrs = [
+        "engine_with_test_server.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":test_server_lib",
+        "//library/cc:engine_builder_lib",
+    ],
 )

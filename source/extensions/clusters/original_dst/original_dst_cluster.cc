@@ -74,7 +74,7 @@ HostConstSharedPtr OriginalDstCluster::LoadBalancer::chooseHost(LoadBalancerCont
         // Create a host we can use immediately.
         auto info = parent_->cluster_->info();
         HostSharedPtr host(std::make_shared<HostImpl>(
-            info, info->name() + dst_addr.asString(), std::move(host_ip_port), nullptr, 1,
+            info, info->name() + dst_addr.asString(), std::move(host_ip_port), nullptr, nullptr, 1,
             envoy::config::core::v3::Locality().default_instance(),
             envoy::config::endpoint::v3::Endpoint::HealthCheckConfig().default_instance(), 0,
             envoy::config::core::v3::UNKNOWN, parent_->cluster_->time_source_));
@@ -196,17 +196,18 @@ OriginalDstCluster::OriginalDstCluster(const envoy::config::cluster::v3::Cluster
           std::chrono::milliseconds(PROTOBUF_GET_MS_OR_DEFAULT(config, cleanup_interval, 5000))),
       cleanup_timer_(dispatcher_.createTimer([this]() -> void { cleanup(); })),
       host_map_(std::make_shared<HostMultiMap>()) {
-  if (const auto& config_opt = info_->lbOriginalDstConfig(); config_opt.has_value()) {
-    if (config_opt->use_http_header()) {
-      http_header_name_ = config_opt->http_header_name().empty()
+  if (config.has_original_dst_lb_config()) {
+    const auto& lb_config = config.original_dst_lb_config();
+    if (lb_config.use_http_header()) {
+      http_header_name_ = lb_config.http_header_name().empty()
                               ? Http::Headers::get().EnvoyOriginalDstHost
-                              : Http::LowerCaseString(config_opt->http_header_name());
+                              : Http::LowerCaseString(lb_config.http_header_name());
     }
-    if (config_opt->has_metadata_key()) {
-      metadata_key_ = Config::MetadataKey(config_opt->metadata_key());
+    if (lb_config.has_metadata_key()) {
+      metadata_key_ = Config::MetadataKey(lb_config.metadata_key());
     }
-    if (config_opt->has_upstream_port_override()) {
-      port_override_ = config_opt->upstream_port_override().value();
+    if (lb_config.has_upstream_port_override()) {
+      port_override_ = lb_config.upstream_port_override().value();
     }
   }
   cleanup_timer_->enableTimer(cleanup_interval_ms_);

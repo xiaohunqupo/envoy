@@ -381,7 +381,6 @@ envoy_cc_library(
         "//source/common/config:utility_lib",
         "//source/common/http/http1:codec_lib",
         "//source/common/http/http2:codec_lib",
-        "//source/common/http/match_delegate:config",
         "//source/common/network:common_connection_filter_states_lib",
         "//source/common/network:proxy_protocol_filter_state_lib",
         "//source/common/network:utility_lib",
@@ -450,6 +449,7 @@ envoy_cc_library(
         ":headers_lib",
         "//envoy/http:header_map_interface",
         "//source/common/common:assert_lib",
+        "//source/common/common:compiled_string_map_lib",
         "//source/common/common:dump_state_utils",
         "//source/common/common:empty_string",
         "//source/common/common:non_copyable",
@@ -499,6 +499,12 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "http_option_limits_lib",
+    srcs = ["http_option_limits.cc"],
+    hdrs = ["http_option_limits.h"],
+)
+
+envoy_cc_library(
     name = "utility_lib",
     srcs = ["utility.cc"],
     hdrs = ["utility.h"],
@@ -513,6 +519,7 @@ envoy_cc_library(
         ":exception_lib",
         ":header_map_lib",
         ":headers_lib",
+        ":http_option_limits_lib",
         ":message_lib",
         "//envoy/common:regex_interface",
         "//envoy/http:codes_interface",

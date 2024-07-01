@@ -28,7 +28,7 @@ public:
 
   ExternalProcessorStreamPtr start(ExternalProcessorCallbacks& callbacks,
                                    const Grpc::GrpcServiceConfigWithHashKey& config_with_hash_key,
-                                   const StreamInfo::StreamInfo& stream_info) override;
+                                   const Http::AsyncClient::StreamOptions& options) override;
 
 private:
   Grpc::AsyncClientManager& client_manager_;
@@ -42,12 +42,18 @@ public:
   // Factory method: create and return `ExternalProcessorStreamPtr`; return nullptr on failure.
   static ExternalProcessorStreamPtr
   create(Grpc::AsyncClient<ProcessingRequest, ProcessingResponse>&& client,
-         ExternalProcessorCallbacks& callbacks, const StreamInfo::StreamInfo& stream_info);
+         ExternalProcessorCallbacks& callbacks, const Http::AsyncClient::StreamOptions& options);
 
   void send(ProcessingRequest&& request, bool end_stream) override;
   // Close the stream. This is idempotent and will return true if we
   // actually closed it.
   bool close() override;
+
+  void notifyFilterDestroy() override {
+    // When the filter object is being destroyed,  `callbacks_` (which is a OptRef to filter object)
+    // should be reset to avoid the dangling reference.
+    callbacks_.reset();
+  }
 
   // AsyncStreamCallbacks
   void onReceiveMessage(ProcessingResponsePtr&& message) override;
@@ -66,8 +72,9 @@ private:
   // Start the gRPC async stream: It returns true if the start succeeded. Otherwise it returns false
   // if it failed to start.
   bool startStream(Grpc::AsyncClient<ProcessingRequest, ProcessingResponse>&& client,
-                   const StreamInfo::StreamInfo& stream_info);
-  ExternalProcessorCallbacks& callbacks_;
+                   const Http::AsyncClient::StreamOptions& options);
+  // Optional reference to filter object.
+  OptRef<ExternalProcessorCallbacks> callbacks_;
   Grpc::AsyncClient<ProcessingRequest, ProcessingResponse> client_;
   Grpc::AsyncStream<ProcessingRequest> stream_;
   Http::AsyncClient::ParentContext grpc_context_;

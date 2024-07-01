@@ -32,8 +32,10 @@ SdsApi::SdsApi(envoy::config::core::v3::ConfigSource sds_config, absl::string_vi
                                               time_source_.systemTime()} {
   const auto resource_name = getResourceName();
   // This has to happen here (rather than in initialize()) as it can throw exceptions.
-  subscription_ = subscription_factory_.subscriptionFromConfigSource(
-      sds_config_, Grpc::Common::typeUrl(resource_name), *scope_, *this, resource_decoder_, {});
+  subscription_ = THROW_OR_RETURN_VALUE(
+      subscription_factory_.subscriptionFromConfigSource(
+          sds_config_, Grpc::Common::typeUrl(resource_name), *scope_, *this, resource_decoder_, {}),
+      Config::SubscriptionPtr);
 }
 
 void SdsApi::resolveDataSource(const FileContentMap& files,
@@ -69,7 +71,7 @@ void SdsApi::onWatchUpdate() {
     const uint64_t new_hash = next_hash;
     if (new_hash != files_hash_) {
       resolveSecret(files);
-      update_callback_manager_.runCallbacks();
+      THROW_IF_NOT_OK(update_callback_manager_.runCallbacks());
       files_hash_ = new_hash;
     }
   }
@@ -103,7 +105,7 @@ absl::Status SdsApi::onConfigUpdate(const std::vector<Config::DecodedResourceRef
     const auto files = loadFiles();
     files_hash_ = getHashForFiles(files);
     resolveSecret(files);
-    update_callback_manager_.runCallbacks();
+    THROW_IF_NOT_OK(update_callback_manager_.runCallbacks());
 
     auto* watched_directory = getWatchedDirectory();
     // Either we have a watched path and can defer the watch monitoring to a
@@ -160,6 +162,10 @@ SdsApi::onConfigUpdate(const std::vector<Config::DecodedResourceRef>& added_reso
         trace,
         "Server sent a delta SDS update attempting to remove a resource (name: {}). Ignoring.",
         removed_resources[0]);
+
+    // Even if we ignore this resource, the owning resource (LDS/CDS) should still complete
+    // warming.
+    init_target_.ready();
     return absl::OkStatus();
   }
   return onConfigUpdate(added_resources, added_resources[0].get().version());

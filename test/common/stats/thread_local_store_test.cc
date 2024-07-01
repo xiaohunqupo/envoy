@@ -18,6 +18,7 @@
 #include "source/common/stats/tag_producer_impl.h"
 #include "source/common/stats/thread_local_store.h"
 
+#include "test/common/memory/memory_test_utility.h"
 #include "test/common/stats/real_thread_test_base.h"
 #include "test/common/stats/stat_test_utility.h"
 #include "test/mocks/event/mocks.h"
@@ -788,7 +789,8 @@ TEST_F(StatsThreadLocalStoreTest, ExtractAndAppendTagsFixedValue) {
   tag_specifier->set_tag_name("foo");
   tag_specifier->set_fixed_value("bar");
 
-  store_->setTagProducer(std::make_unique<TagProducerImpl>(stats_config));
+  const Stats::TagVector tags_vector;
+  store_->setTagProducer(TagProducerImpl::createTagProducer(stats_config, tags_vector).value());
 
   StatNamePool pool(symbol_table_);
   StatNameTagVector tags{{pool.add("a"), pool.add("b")}};
@@ -810,7 +812,8 @@ TEST_F(StatsThreadLocalStoreTest, ExtractAndAppendTagsRegexValueNoMatch) {
   tag_specifier->set_tag_name("foo");
   tag_specifier->set_regex("bar");
 
-  store_->setTagProducer(std::make_unique<TagProducerImpl>(stats_config));
+  const Stats::TagVector tags_vector;
+  store_->setTagProducer(TagProducerImpl::createTagProducer(stats_config, tags_vector).value());
 
   StatNamePool pool(symbol_table_);
   StatNameTagVector tags{{pool.add("a"), pool.add("b")}};
@@ -829,7 +832,8 @@ TEST_F(StatsThreadLocalStoreTest, ExtractAndAppendTagsRegexValueWithMatch) {
   tag_specifier->set_tag_name("foo_tag");
   tag_specifier->set_regex("^foo.(.+)");
 
-  store_->setTagProducer(std::make_unique<TagProducerImpl>(stats_config));
+  const Stats::TagVector tags_vector;
+  store_->setTagProducer(TagProducerImpl::createTagProducer(stats_config, tags_vector).value());
 
   StatNamePool pool(symbol_table_);
   StatNameTagVector tags{{pool.add("a"), pool.add("b")}};
@@ -846,7 +850,8 @@ TEST_F(StatsThreadLocalStoreTest, ExtractAndAppendTagsRegexBuiltinExpression) {
   store_->initializeThreading(main_thread_dispatcher_, tls_);
 
   envoy::config::metrics::v3::StatsConfig stats_config;
-  store_->setTagProducer(std::make_unique<TagProducerImpl>(stats_config));
+  const Stats::TagVector tags_vector;
+  store_->setTagProducer(TagProducerImpl::createTagProducer(stats_config, tags_vector).value());
 
   StatNamePool pool(symbol_table_);
   StatNameTagVector tags{{pool.add("a"), pool.add("b")}};
@@ -931,7 +936,7 @@ public:
     });
 
     {
-      TestUtil::MemoryTest memory_test;
+      Memory::TestUtil::MemoryTest memory_test;
       for (StatName stat_name : stat_names) {
         scope_.counterFromStatName(stat_name);
       }
@@ -1508,7 +1513,8 @@ protected:
 
     // Use a tag producer that will produce tags.
     envoy::config::metrics::v3::StatsConfig stats_config;
-    store_.setTagProducer(std::make_unique<TagProducerImpl>(stats_config));
+    const Stats::TagVector tags_vector;
+    store_.setTagProducer(TagProducerImpl::createTagProducer(stats_config, tags_vector).value());
   }
 
   ~StatsThreadLocalStoreTestNoFixture() override {
@@ -1538,7 +1544,7 @@ protected:
 
 // Tests how much memory is consumed allocating 100k stats.
 TEST_F(StatsThreadLocalStoreTestNoFixture, MemoryWithoutTlsRealSymbolTable) {
-  TestUtil::MemoryTest memory_test;
+  Memory::TestUtil::MemoryTest memory_test;
   TestUtil::forEachSampleStat(
       100, true, [this](absl::string_view name) { scope_.counterFromString(std::string(name)); });
   EXPECT_MEMORY_EQ(memory_test.consumedBytes(), 688080); // July 2, 2020
@@ -1547,7 +1553,7 @@ TEST_F(StatsThreadLocalStoreTestNoFixture, MemoryWithoutTlsRealSymbolTable) {
 
 TEST_F(StatsThreadLocalStoreTestNoFixture, MemoryWithTlsRealSymbolTable) {
   initThreading();
-  TestUtil::MemoryTest memory_test;
+  Memory::TestUtil::MemoryTest memory_test;
   TestUtil::forEachSampleStat(
       100, true, [this](absl::string_view name) { scope_.counterFromString(std::string(name)); });
   EXPECT_MEMORY_EQ(memory_test.consumedBytes(), 827616); // Sep 25, 2020
@@ -2177,11 +2183,11 @@ protected:
       layer->set_name("admin");
       layer->mutable_admin_layer();
     }
-    absl::Status creation_status;
-    loader_ = std::make_unique<Runtime::LoaderImpl>(dispatcher_, tls_, layered_runtime, local_info_,
-                                                    *store_, generator_, validation_visitor_, *api_,
-                                                    creation_status);
-    THROW_IF_NOT_OK(creation_status);
+    absl::StatusOr<std::unique_ptr<Runtime::LoaderImpl>> loader =
+        Runtime::LoaderImpl::create(dispatcher_, tls_, layered_runtime, local_info_, *store_,
+                                    generator_, validation_visitor_, *api_);
+    THROW_IF_NOT_OK(loader.status());
+    loader_ = std::move(loader.value());
   }
 
   NiceMock<Server::Configuration::MockServerFactoryContext> context_;

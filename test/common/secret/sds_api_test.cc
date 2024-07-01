@@ -112,7 +112,7 @@ TEST_F(SdsApiTest, InitManagerInitialised) {
                         &stats](const envoy::config::core::v3::ConfigSource&, absl::string_view,
                                 Stats::Scope&, Config::SubscriptionCallbacks& cbs,
                                 Config::OpaqueResourceDecoderSharedPtr,
-                                const Config::SubscriptionOptions&) -> Config::SubscriptionPtr {
+                                const Config::SubscriptionOptions&) {
         return std::make_unique<Config::FilesystemSubscriptionImpl>(
             *dispatcher_, Config::makePathConfigSource(sds_config_path), cbs, resource_decoder,
             stats, validation_visitor_, *api_);
@@ -138,7 +138,7 @@ TEST_F(SdsApiTest, BadConfigSource) {
   ::testing::InSequence s;
   envoy::config::core::v3::ConfigSource config_source;
   EXPECT_CALL(subscription_factory_, subscriptionFromConfigSource(_, _, _, _, _, _))
-      .WillOnce(InvokeWithoutArgs([]() -> Config::SubscriptionPtr {
+      .WillOnce(InvokeWithoutArgs([]() {
         throw EnvoyException("bad config");
         return nullptr;
       }));
@@ -159,8 +159,8 @@ TEST_F(SdsApiTest, DynamicTlsCertificateUpdateSuccess) {
   init_manager_.add(*sds_api.initTarget());
   initialize();
   NiceMock<Secret::MockSecretCallbacks> secret_callback;
-  auto handle =
-      sds_api.addUpdateCallback([&secret_callback]() { secret_callback.onAddOrUpdateSecret(); });
+  auto handle = sds_api.addUpdateCallback(
+      [&secret_callback]() { return secret_callback.onAddOrUpdateSecret(); });
 
   std::string yaml =
       R"EOF(
@@ -179,14 +179,14 @@ TEST_F(SdsApiTest, DynamicTlsCertificateUpdateSuccess) {
   EXPECT_TRUE(subscription_factory_.callbacks_->onConfigUpdate(decoded_resources.refvec_, "").ok());
 
   testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext> ctx;
-  Ssl::TlsCertificateConfigImpl tls_config(*sds_api.secret(), ctx, *api_);
+  auto tls_config = Ssl::TlsCertificateConfigImpl::create(*sds_api.secret(), ctx, *api_).value();
   const std::string cert_pem = "{{ test_rundir }}/test/common/tls/test_data/selfsigned_cert.pem";
   EXPECT_EQ(TestEnvironment::readFileToStringForTest(TestEnvironment::substitute(cert_pem)),
-            tls_config.certificateChain());
+            tls_config->certificateChain());
 
   const std::string key_pem = "{{ test_rundir }}/test/common/tls/test_data/selfsigned_key.pem";
   EXPECT_EQ(TestEnvironment::readFileToStringForTest(TestEnvironment::substitute(key_pem)),
-            tls_config.privateKey());
+            tls_config->privateKey());
 }
 
 class SdsRotationApiTest : public SdsApiTestBase {
@@ -220,7 +220,8 @@ protected:
         []() {}, mock_dispatcher_, *api_);
     init_manager_.add(*sds_api_->initTarget());
     initialize();
-    handle_ = sds_api_->addUpdateCallback([this]() { secret_callback_.onAddOrUpdateSecret(); });
+    handle_ =
+        sds_api_->addUpdateCallback([this]() { return secret_callback_.onAddOrUpdateSecret(); });
   }
 
   void onConfigUpdate(const std::string& cert_value, const std::string& key_value) {
@@ -291,7 +292,8 @@ protected:
         []() {}, mock_dispatcher_, *api_);
     init_manager_.add(*sds_api_->initTarget());
     initialize();
-    handle_ = sds_api_->addUpdateCallback([this]() { secret_callback_.onAddOrUpdateSecret(); });
+    handle_ =
+        sds_api_->addUpdateCallback([this]() { return secret_callback_.onAddOrUpdateSecret(); });
   }
 
   void onConfigUpdate(const std::string& trusted_ca_path, const std::string& trusted_ca_value,
@@ -576,8 +578,8 @@ TEST_F(SdsApiTest, DeltaUpdateSuccess) {
   init_manager_.add(*sds_api.initTarget());
 
   NiceMock<Secret::MockSecretCallbacks> secret_callback;
-  auto handle =
-      sds_api.addUpdateCallback([&secret_callback]() { secret_callback.onAddOrUpdateSecret(); });
+  auto handle = sds_api.addUpdateCallback(
+      [&secret_callback]() { return secret_callback.onAddOrUpdateSecret(); });
 
   std::string yaml =
       R"EOF(
@@ -598,14 +600,14 @@ TEST_F(SdsApiTest, DeltaUpdateSuccess) {
       subscription_factory_.callbacks_->onConfigUpdate(decoded_resources.refvec_, {}, "").ok());
 
   testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext> ctx;
-  Ssl::TlsCertificateConfigImpl tls_config(*sds_api.secret(), ctx, *api_);
+  auto tls_config = Ssl::TlsCertificateConfigImpl::create(*sds_api.secret(), ctx, *api_).value();
   const std::string cert_pem = "{{ test_rundir }}/test/common/tls/test_data/selfsigned_cert.pem";
   EXPECT_EQ(TestEnvironment::readFileToStringForTest(TestEnvironment::substitute(cert_pem)),
-            tls_config.certificateChain());
+            tls_config->certificateChain());
 
   const std::string key_pem = "{{ test_rundir }}/test/common/tls/test_data/selfsigned_key.pem";
   EXPECT_EQ(TestEnvironment::readFileToStringForTest(TestEnvironment::substitute(key_pem)),
-            tls_config.privateKey());
+            tls_config->privateKey());
 }
 
 // Validate that CertificateValidationContextSdsApi updates secrets successfully if
@@ -619,8 +621,8 @@ TEST_F(SdsApiTest, DynamicCertificateValidationContextUpdateSuccess) {
   init_manager_.add(*sds_api.initTarget());
 
   NiceMock<Secret::MockSecretCallbacks> secret_callback;
-  auto handle =
-      sds_api.addUpdateCallback([&secret_callback]() { secret_callback.onAddOrUpdateSecret(); });
+  auto handle = sds_api.addUpdateCallback(
+      [&secret_callback]() { return secret_callback.onAddOrUpdateSecret(); });
 
   std::string yaml =
       R"EOF(
@@ -671,13 +673,14 @@ TEST_F(SdsApiTest, DefaultCertificateValidationContextTest) {
   init_manager_.add(*sds_api.initTarget());
 
   NiceMock<Secret::MockSecretCallbacks> secret_callback;
-  auto handle =
-      sds_api.addUpdateCallback([&secret_callback]() { secret_callback.onAddOrUpdateSecret(); });
+  auto handle = sds_api.addUpdateCallback(
+      [&secret_callback]() { return secret_callback.onAddOrUpdateSecret(); });
   NiceMock<MockCvcValidationCallback> validation_callback;
   auto validation_handle = sds_api.addValidationCallback(
       [&validation_callback](
           const envoy::extensions::transport_sockets::tls::v3::CertificateValidationContext& cvc) {
         validation_callback.validateCvc(cvc);
+        return absl::OkStatus();
       });
 
   envoy::extensions::transport_sockets::tls::v3::Secret typed_secret;
@@ -765,13 +768,14 @@ TEST_F(SdsApiTest, GenericSecretSdsApiTest) {
   init_manager_.add(*sds_api.initTarget());
 
   NiceMock<Secret::MockSecretCallbacks> secret_callback;
-  auto handle =
-      sds_api.addUpdateCallback([&secret_callback]() { secret_callback.onAddOrUpdateSecret(); });
+  auto handle = sds_api.addUpdateCallback(
+      [&secret_callback]() { return secret_callback.onAddOrUpdateSecret(); });
   NiceMock<MockGenericSecretValidationCallback> validation_callback;
   auto validation_handle = sds_api.addValidationCallback(
       [&validation_callback](
           const envoy::extensions::transport_sockets::tls::v3::GenericSecret& secret) {
         validation_callback.validateGenericSecret(secret);
+        return absl::OkStatus();
       });
 
   std::string yaml =
