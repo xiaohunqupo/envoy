@@ -76,11 +76,10 @@ jobs:
           name: Release (arm64)
           arch: arm64
           bazel-extra: >-
-            --config=cache-envoy-engflow
-            --config=common-envoy-engflow
-            --config=bes-envoy-engflow
+            --config=remote-cache-envoy-engflow
           rbe: false
-          runs-on: envoy-arm64-medium
+          # TODO(phlax): Switch this back to medium size
+          runs-on: envoy-arm64-large
 
   distribution:
     permissions:
@@ -97,9 +96,7 @@ jobs:
     with:
       arch: ${{ matrix.arch }}
       bazel-extra: >-
-        --config=cache-envoy-engflow
-        --config=common-envoy-engflow
-        --config=bes-envoy-engflow
+        --config=remote-cache-envoy-engflow
       downloads: |
         release.${{ matrix.arch }}: release/${{ matrix.arch }}/bin/
       target: ${{ matrix.target }}
@@ -127,7 +124,7 @@ jobs:
           name: Package debs (arm64)
           arch: arm64
           cache-build-image-key-suffix: -arm64
-          runs-on: envoy-arm64-small
+          runs-on: github-arm64-2c-8gb
 
   docker:
     permissions:
