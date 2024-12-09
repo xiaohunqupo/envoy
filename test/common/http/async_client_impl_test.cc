@@ -497,7 +497,6 @@ TEST_F(AsyncClientImplTest, OngoingRequestWithWatermarking) {
   EXPECT_NE(request, nullptr);
 
   StrictMock<MockSidestreamWatermarkCallbacks> watermark_callbacks;
-  EXPECT_CALL(watermark_callbacks, removeDownstreamWatermarkCallbacks(_));
 
   // Registering a new watermark callback should note that the high watermark has already been hit.
   EXPECT_CALL(watermark_callbacks, onSidestreamAboveHighWatermark());
@@ -558,7 +557,6 @@ TEST_F(AsyncClientImplTest, OngoingRequestWithWatermarkingAndReset) {
 
   StrictMock<MockSidestreamWatermarkCallbacks> watermark_callbacks;
   request->setWatermarkCallbacks(watermark_callbacks);
-  EXPECT_CALL(watermark_callbacks, removeDownstreamWatermarkCallbacks(_));
 
   EXPECT_CALL(stream_encoder_, encodeData(BufferEqual(&data_copy), false));
   request->sendData(data, false);
@@ -935,8 +933,9 @@ TEST_F(AsyncClientImplTest, WithFilterState) {
   EXPECT_CALL(cm_.thread_local_cluster_, httpConnPool(_, _, _))
       .WillOnce(Invoke([&](Upstream::ResourcePriority, absl::optional<Http::Protocol>,
                            Upstream::LoadBalancerContext* context) {
-        const StreamInfo::FilterState& filter_state = context->requestStreamInfo()->filterState();
-        const TestStateObject* state = filter_state.getDataReadOnly<TestStateObject>("test-filter");
+        StreamInfo::FilterStateSharedPtr filter_state = context->requestStreamInfo()->filterState();
+        const TestStateObject* state =
+            filter_state->getDataReadOnly<TestStateObject>("test-filter");
         EXPECT_NE(state, nullptr);
         EXPECT_EQ(state->value(), "stored-test-state");
         return Upstream::HttpPoolData([]() {}, &cm_.thread_local_cluster_.conn_pool_);
@@ -2252,7 +2251,7 @@ public:
     retry_policy_ = std::move(policy_or_error.value());
     EXPECT_TRUE(retry_policy_.get());
 
-    route_impl_ = std::make_unique<NullRouteImpl>(
+    route_impl_ = *NullRouteImpl::create(
         client_.cluster_->name(), *retry_policy_, regex_engine_, absl::nullopt,
         Protobuf::RepeatedPtrField<envoy::config::route::v3::RouteAction::HashPolicy>());
   }
