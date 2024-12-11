@@ -305,7 +305,7 @@ UdpProxyFilter::createSessionWithOptionalHost(Network::UdpRecvData::LocalPeerAdd
 
 Upstream::HostConstSharedPtr UdpProxyFilter::ClusterInfo::chooseHost(
     const Network::Address::InstanceConstSharedPtr& peer_address,
-    const StreamInfo::StreamInfo* stream_info) const {
+    StreamInfo::StreamInfo* stream_info) const {
   UdpLoadBalancerContext context(filter_.config_->hashPolicy(), peer_address, stream_info);
   Upstream::HostConstSharedPtr host = cluster_.loadBalancer().chooseHost(&context);
   return host;
@@ -907,8 +907,9 @@ TunnelingConnectionPoolImpl::TunnelingConnectionPoolImpl(
       downstream_info_(downstream_info) {
   // TODO(ohadvano): support upstream HTTP/3.
   absl::optional<Http::Protocol> protocol = Http::Protocol::Http2;
-  conn_pool_data_ =
-      thread_local_cluster.httpConnPool(Upstream::ResourcePriority::Default, protocol, context);
+  auto host = thread_local_cluster.loadBalancer().chooseHost(context);
+  conn_pool_data_ = thread_local_cluster.httpConnPool(host, Upstream::ResourcePriority::Default,
+                                                      protocol, context);
 }
 
 void TunnelingConnectionPoolImpl::newStream(HttpStreamCallbacks& callbacks) {
