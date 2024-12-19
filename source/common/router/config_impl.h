@@ -279,6 +279,7 @@ public:
 
   // Router::VirtualHost
   const CorsPolicy* corsPolicy() const override { return cors_policy_.get(); }
+  const std::string& name() const override { return name_; }
   Stats::StatName statName() const override { return stat_name_storage_.statName(); }
   const RateLimitPolicy& rateLimitPolicy() const override {
     if (rate_limit_policy_ != nullptr) {
@@ -359,6 +360,7 @@ private:
                              scope.scopeFromStatName(stat_names.other_), stat_names) {}
   };
 
+  const std::string name_;
   const Stats::StatNameManagedStorage stat_name_storage_;
   Stats::ScopeSharedPtr vcluster_scope_;
   std::vector<VirtualClusterEntry> virtual_clusters_;
@@ -538,8 +540,9 @@ public:
   bool hedgeOnPerTryTimeout() const override { return hedge_on_per_try_timeout_; }
 
 private:
-  const uint32_t initial_requests_;
   const envoy::type::v3::FractionalPercent additional_request_chance_;
+  // Keep small members (bools and enums) at the end of class, to reduce alignment overhead.
+  const uint32_t initial_requests_;
   const bool hedge_on_per_try_timeout_;
 };
 using DefaultHedgePolicy = ConstSingleton<HedgePolicyImpl>;

@@ -20,21 +20,19 @@ TEST_P(DynamicModuleTestLanguages, Nop) {
   auto dynamic_module = newDynamicModule(testSharedObjectPath("no_op", language), false);
   EXPECT_TRUE(dynamic_module.ok());
 
-  auto filter_config_ptr = std::make_shared<
-      Envoy::Extensions::DynamicModules::HttpFilters::DynamicModuleHttpFilterConfig>(
-      filter_name, filter_config, dynamic_module.value());
+  auto filter_config_or_status =
+      Envoy::Extensions::DynamicModules::HttpFilters::newDynamicModuleHttpFilterConfig(
+          filter_name, filter_config, std::move(dynamic_module.value()));
+  EXPECT_TRUE(filter_config_or_status.ok());
 
-  auto filter =
-      std::make_shared<Envoy::Extensions::DynamicModules::HttpFilters::DynamicModuleHttpFilter>(
-          filter_config_ptr);
+  auto filter = std::make_shared<DynamicModuleHttpFilter>(filter_config_or_status.value());
+  filter->initializeInModuleFilter();
 
   // The followings are mostly for coverage at the moment.
   NiceMock<Http::MockStreamDecoderFilterCallbacks> decoder_callbacks;
   filter->setDecoderFilterCallbacks(decoder_callbacks);
   NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_callbacks;
   filter->setEncoderFilterCallbacks(encoder_callbacks);
-  filter->onStreamComplete();
-  filter->onDestroy();
   TestRequestHeaderMapImpl headers{{}};
   EXPECT_EQ(FilterHeadersStatus::Continue, filter->decodeHeaders(headers, false));
   Buffer::OwnedImpl data;
@@ -52,6 +50,8 @@ TEST_P(DynamicModuleTestLanguages, Nop) {
   EXPECT_EQ(FilterTrailersStatus::Continue, filter->encodeTrailers(response_trailers));
   EXPECT_EQ(FilterMetadataStatus::Continue, filter->encodeMetadata(metadata));
   filter->encodeComplete();
+  filter->onStreamComplete();
+  filter->onDestroy();
 }
 
 } // namespace HttpFilters
