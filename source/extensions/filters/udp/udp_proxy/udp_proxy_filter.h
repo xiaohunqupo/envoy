@@ -149,7 +149,7 @@ class UdpLoadBalancerContext : public Upstream::LoadBalancerContextBase {
 public:
   UdpLoadBalancerContext(const Udp::HashPolicy* hash_policy,
                          const Network::Address::InstanceConstSharedPtr& peer_address,
-                         const StreamInfo::StreamInfo* stream_info)
+                         StreamInfo::StreamInfo* stream_info)
       : stream_info_(stream_info) {
     if (hash_policy) {
       hash_ = hash_policy->generateHash(*peer_address);
@@ -157,11 +157,11 @@ public:
   }
 
   absl::optional<uint64_t> computeHashKey() override { return hash_; }
-  const StreamInfo::StreamInfo* requestStreamInfo() const override { return stream_info_; }
+  StreamInfo::StreamInfo* requestStreamInfo() const override { return stream_info_; }
 
 private:
   absl::optional<uint64_t> hash_;
-  const StreamInfo::StreamInfo* stream_info_;
+  StreamInfo::StreamInfo* const stream_info_;
 };
 
 /**
@@ -858,10 +858,11 @@ protected:
 
     Upstream::HostConstSharedPtr
     chooseHost(const Network::Address::InstanceConstSharedPtr& peer_address,
-               const StreamInfo::StreamInfo* stream_info) const;
+               StreamInfo::StreamInfo* stream_info) const;
 
     UdpProxyFilter& filter_;
     Upstream::ThreadLocalCluster& cluster_;
+    Upstream::ClusterInfoConstSharedPtr cluster_info_;
     UdpProxyUpstreamStats cluster_stats_;
     absl::flat_hash_set<ActiveSession*> sessions_;
 
