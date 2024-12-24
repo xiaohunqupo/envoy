@@ -86,11 +86,11 @@ public:
     }
   }
 };
-const char* codec_strerror(int error_code) { return nghttp2_strerror(error_code); }
+const char* codecStrError(int error_code) { return nghttp2_strerror(error_code); }
 #else
   const absl::string_view errorDetails(int) const { return oghttp2_err_unknown_; }
 };
-const char* codec_strerror(int) { return "unknown_error"; }
+const char* codecStrError(int) { return "unknown_error"; }
 #endif
 
 int reasonToReset(StreamResetReason reason) {
@@ -105,6 +105,7 @@ int reasonToReset(StreamResetReason reason) {
 }
 
 using Http2ResponseCodeDetails = ConstSingleton<Http2ResponseCodeDetailValues>;
+using OnHeaderResult = http2::adapter::Http2VisitorInterface::OnHeaderResult;
 
 enum Settings {
   // SETTINGS_HEADER_TABLE_SIZE = 0x01,
@@ -966,7 +967,7 @@ Http::Status ConnectionImpl::dispatch(Buffer::Instance& data) {
     }
 #endif
     if (rc != static_cast<ssize_t>(slice.len_)) {
-      return codecProtocolError(codec_strerror(rc));
+      return codecProtocolError(codecStrError(rc));
     }
 
     current_slice_ = nullptr;
@@ -1253,7 +1254,7 @@ int ConnectionImpl::onError(absl::string_view error) {
 }
 
 int ConnectionImpl::onInvalidFrame(int32_t stream_id, int error_code) {
-  ENVOY_CONN_LOG(debug, "invalid frame: {} on stream {}", connection_, codec_strerror(error_code),
+  ENVOY_CONN_LOG(debug, "invalid frame: {} on stream {}", connection_, codecStrError(error_code),
                  stream_id);
 
   // Set details of error_code in the stream whenever we have one.
@@ -1527,7 +1528,7 @@ Status ConnectionImpl::sendPendingFrames() {
   const int rc = adapter_->Send();
   if (rc != 0) {
     ASSERT(rc == ERR_CALLBACK_FAILURE);
-    return codecProtocolError(codec_strerror(rc));
+    return codecProtocolError(codecStrError(rc));
   }
 
   // See ConnectionImpl::StreamImpl::resetStream() for why we do this. This is an uncommon event,
@@ -1753,10 +1754,9 @@ bool ConnectionImpl::Http2Visitor::OnBeginHeadersForStream(Http2StreamId stream_
   return 0 == connection_->setAndCheckCodecCallbackStatus(std::move(status));
 }
 
-http2::adapter::Http2VisitorInterface::OnHeaderResult
-ConnectionImpl::Http2Visitor::OnHeaderForStream(Http2StreamId stream_id,
-                                                absl::string_view name_view,
-                                                absl::string_view value_view) {
+OnHeaderResult ConnectionImpl::Http2Visitor::OnHeaderForStream(Http2StreamId stream_id,
+                                                               absl::string_view name_view,
+                                                               absl::string_view value_view) {
   // TODO PERF: Can reference count here to avoid copies.
   HeaderString name;
   name.setCopy(name_view.data(), name_view.size());
@@ -1765,11 +1765,11 @@ ConnectionImpl::Http2Visitor::OnHeaderForStream(Http2StreamId stream_id,
   const int result = connection_->onHeader(stream_id, std::move(name), std::move(value));
   switch (result) {
   case 0:
-    return HEADER_OK;
+    return OnHeaderResult::HEADER_OK;
   case ERR_TEMPORAL_CALLBACK_FAILURE:
-    return HEADER_RST_STREAM;
+    return OnHeaderResult::HEADER_RST_STREAM;
   default:
-    return HEADER_CONNECTION_ERROR;
+    return OnHeaderResult::HEADER_CONNECTION_ERROR;
   }
 }
 
@@ -1793,8 +1793,8 @@ bool ConnectionImpl::Http2Visitor::OnBeginDataForStream(Http2StreamId stream_id,
                                              padding_length_);
     return 0 == connection_->setAndCheckCodecCallbackStatus(std::move(status));
   }
-  ENVOY_CONN_LOG(debug, "Http2Visitor: remaining data payload: {}, end_stream: {}",
-                 connection_->connection_, remaining_data_payload_,
+  ENVOY_CONN_LOG(debug, "Http2Visitor: remaining data payload: {}, stream_id: {}, end_stream: {}",
+                 connection_->connection_, remaining_data_payload_, stream_id,
                  bool(current_frame_.flags & FLAG_END_STREAM));
   return true;
 }
@@ -1810,8 +1810,8 @@ bool ConnectionImpl::Http2Visitor::OnDataPaddingLength(Http2StreamId stream_id,
                                              padding_length_);
     return 0 == connection_->setAndCheckCodecCallbackStatus(std::move(status));
   }
-  ENVOY_CONN_LOG(trace, "Http2Visitor: remaining data payload: {}, end_stream: {}",
-                 connection_->connection_, remaining_data_payload_,
+  ENVOY_CONN_LOG(trace, "Http2Visitor: remaining data payload: {}, stream_id: {}, end_stream: {}",
+                 connection_->connection_, remaining_data_payload_, stream_id,
                  bool(current_frame_.flags & FLAG_END_STREAM));
   return true;
 }
@@ -1829,8 +1829,8 @@ bool ConnectionImpl::Http2Visitor::OnDataForStream(Http2StreamId stream_id,
                                              padding_length_);
     return 0 == connection_->setAndCheckCodecCallbackStatus(std::move(status));
   }
-  ENVOY_CONN_LOG(trace, "Http2Visitor: remaining data payload: {}, end_stream: {}",
-                 connection_->connection_, remaining_data_payload_,
+  ENVOY_CONN_LOG(trace, "Http2Visitor: remaining data payload: {}, stream_id: {}, end_stream: {}",
+                 connection_->connection_, remaining_data_payload_, stream_id,
                  bool(current_frame_.flags & FLAG_END_STREAM));
   return result == 0;
 }
@@ -1857,7 +1857,7 @@ bool ConnectionImpl::Http2Visitor::OnCloseStream(Http2StreamId stream_id,
                                                  Http2ErrorCode error_code) {
   Status status = connection_->onStreamClose(stream_id, static_cast<uint32_t>(error_code));
   if (stream_close_listener_) {
-    ENVOY_CONN_LOG(trace, "Http2Visitor invoking stream close listener for {}",
+    ENVOY_CONN_LOG(trace, "Http2Visitor invoking stream close listener for stream {}",
                    connection_->connection_, stream_id);
     stream_close_listener_(stream_id);
   }
