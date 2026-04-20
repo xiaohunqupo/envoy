@@ -1079,5 +1079,9 @@ new_features:
   change: |
     Promoted the dynamic modules HTTP filter (``envoy.filters.http.dynamic_modules``) from alpha
     to stable.
+- area: attributes
+  change: |
+    Added ``connection.peer_certificate`` and ``upstream.peer_certificate`` attributes that provide the
+    PEM-encoded peer certificate for downstream and upstream TLS connections respectively.
 
 deprecated:
