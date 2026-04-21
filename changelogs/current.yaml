@@ -291,6 +291,11 @@ bug_fixes:
     intentionally not parseable (for example ``goo.gle/debugonly`` prefixes). This change can
     be reverted by setting runtime guard
     ``envoy.reloadable_features.cel_message_serialize_text_format`` to ``false``.
+- area: ext_proc
+  change: |
+    Fixed a bug that unnecessary empty data chunks are processed by the filter chain. This
+    change can be reverted by setting the runtime guard
+    ``envoy.reloadable_features.ext_proc_return_stop_iteration`` to ``false``.
 - area: ratelimit
   change: |
     Fixed a bug in the gRPC rate limit client where the client could get into a bad state if the
