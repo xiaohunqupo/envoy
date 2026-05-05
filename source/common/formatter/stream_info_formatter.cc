@@ -1646,6 +1646,16 @@ const StreamInfoFormatterProviderLookupTable& getKnownStreamInfoFormatterProvide
                                        return connection_info.ciphersuiteString();
                                      });
                                }}},
+                             {"UPSTREAM_TLS_GROUP",
+                              {CommandSyntaxChecker::COMMAND_ONLY,
+                               [](absl::string_view, absl::optional<size_t>) {
+                                 return std::make_unique<
+                                     StreamInfoUpstreamSslConnectionInfoFormatterProvider>(
+                                     [](const Ssl::ConnectionInfo& connection_info) {
+                                       return absl::make_optional<std::string>(
+                                           connection_info.tlsGroupString());
+                                     });
+                               }}},
                              {"UPSTREAM_TLS_VERSION",
                               {CommandSyntaxChecker::COMMAND_ONLY,
                                [](absl::string_view, absl::optional<size_t>) {
@@ -2105,6 +2115,16 @@ const StreamInfoFormatterProviderLookupTable& getKnownStreamInfoFormatterProvide
                                      StreamInfoSslConnectionInfoFormatterProvider>(
                                      [](const Ssl::ConnectionInfo& connection_info) {
                                        return connection_info.ciphersuiteString();
+                                     });
+                               }}},
+                             {"DOWNSTREAM_TLS_GROUP",
+                              {CommandSyntaxChecker::COMMAND_ONLY,
+                               [](absl::string_view, absl::optional<size_t>) {
+                                 return std::make_unique<
+                                     StreamInfoSslConnectionInfoFormatterProvider>(
+                                     [](const Ssl::ConnectionInfo& connection_info) {
+                                       return absl::make_optional<std::string>(
+                                           connection_info.tlsGroupString());
                                      });
                                }}},
                              {"DOWNSTREAM_TLS_VERSION",
