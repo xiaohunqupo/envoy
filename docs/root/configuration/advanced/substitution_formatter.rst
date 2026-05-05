@@ -1452,6 +1452,14 @@ Current supported substitution commands include:
   UDP
     Not implemented. It will appear as ``"-"`` in the access logs.
 
+.. _config_access_log_format_upstream_server_name:
+
+``%UPSTREAM_SERVER_NAME%``
+  HTTP/TCP/THRIFT
+    The TLS SNI value used to establish the upstream TLS connection.
+  UDP
+    Not implemented. It will appear as ``"-"`` in the access logs.
+
 ``%UPSTREAM_PEER_CERT%``
   HTTP/TCP/THRIFT
     The server certificate in the URL-encoded PEM format used to establish the upstream TLS connection.
