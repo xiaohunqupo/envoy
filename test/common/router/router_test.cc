@@ -3169,7 +3169,7 @@ TEST_F(RouterTest, RetryRequestBeforeBody) {
 
   // Complete request. Ensure original headers are present.
   const std::string body("body");
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body), true));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body), true));
   Buffer::OwnedImpl buf(body);
   router_->decodeData(buf, true);
 
@@ -3215,7 +3215,7 @@ TEST_F(RouterTest, RetryRequestDuringBody) {
   expectNewStreamWithImmediateEncoder(encoder2, &response_decoder, Http::Protocol::Http10);
 
   EXPECT_CALL(encoder2, encodeHeaders(ContainsHeader("myheader", "present"), false));
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body1), false));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body1), false));
   router_->retry_state_->callback_();
   EXPECT_EQ(2U,
             callbacks_.route_->virtual_host_->virtual_cluster_.stats().upstream_rq_total_.value());
@@ -3223,7 +3223,7 @@ TEST_F(RouterTest, RetryRequestDuringBody) {
 
   // Complete request. Ensure original headers are present.
   const std::string body2("body2");
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body2), true));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body2), true));
   Buffer::OwnedImpl buf2(body2);
   EXPECT_CALL(*router_->retry_state_, enabled()).WillOnce(Return(true));
   router_->decodeData(buf2, true);
@@ -3273,7 +3273,7 @@ TEST_F(RouterTest, RetryRequestDuringBodyDataBetweenAttemptsNotEndStream) {
   expectNewStreamWithImmediateEncoder(encoder2, &response_decoder, Http::Protocol::Http10);
 
   EXPECT_CALL(encoder2, encodeHeaders(ContainsHeader("myheader", "present"), false));
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body1 + body2), false));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body1 + body2), false));
   router_->retry_state_->callback_();
   EXPECT_EQ(2U,
             callbacks_.route_->virtual_host_->virtual_cluster_.stats().upstream_rq_total_.value());
@@ -3281,7 +3281,7 @@ TEST_F(RouterTest, RetryRequestDuringBodyDataBetweenAttemptsNotEndStream) {
 
   // Complete request. Ensure original headers are present.
   const std::string body3("body3");
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body3), true));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body3), true));
   Buffer::OwnedImpl buf3(body3);
   router_->decodeData(buf3, true);
 
@@ -3356,7 +3356,7 @@ TEST_F(RouterTest, RetryRequestDuringBodyCompleteBetweenAttempts) {
   expectNewStreamWithImmediateEncoder(encoder2, &response_decoder, Http::Protocol::Http10);
 
   EXPECT_CALL(encoder2, encodeHeaders(ContainsHeader("myheader", "present"), false));
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body1 + body2), true));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body1 + body2), true));
   router_->retry_state_->callback_();
   EXPECT_EQ(2U,
             callbacks_.route_->virtual_host_->virtual_cluster_.stats().upstream_rq_total_.value());
@@ -3406,7 +3406,7 @@ TEST_F(RouterTest, RetryRequestDuringBodyTrailerBetweenAttempts) {
   expectNewStreamWithImmediateEncoder(encoder2, &response_decoder, Http::Protocol::Http10);
 
   EXPECT_CALL(encoder2, encodeHeaders(ContainsHeader("myheader", "present"), false));
-  EXPECT_CALL(encoder2, encodeData(BufferStringEqual(body1), false));
+  EXPECT_CALL(encoder2, encodeData(BufferString(body1), false));
   EXPECT_CALL(encoder2, encodeTrailers(HeaderMapEqualRef(&trailers)));
   router_->retry_state_->callback_();
   EXPECT_EQ(2U,
@@ -5999,8 +5999,8 @@ TEST_P(RouterShadowingTest, StreamingShadow) {
 
   Buffer::InstancePtr body_data(new Buffer::OwnedImpl("hello"));
   EXPECT_CALL(callbacks_, addDecodedData(_, _)).Times(0);
-  EXPECT_CALL(foo_request, sendData(BufferStringEqual("hello"), false));
-  EXPECT_CALL(fizz_request, sendData(BufferStringEqual("hello"), false));
+  EXPECT_CALL(foo_request, sendData(BufferString("hello"), false));
+  EXPECT_CALL(fizz_request, sendData(BufferString("hello"), false));
   EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer, router_->decodeData(*body_data, false));
 
   Http::TestRequestTrailerMapImpl trailers{{"some", "trailer"}};
