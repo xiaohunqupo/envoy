@@ -14,6 +14,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "library/cc/engine.h"
+#include "library/cc/engine_builder_base.h"
 #include "library/cc/key_value_store.h"
 #include "library/cc/string_accessor.h"
 #include "library/common/engine_types.h"
@@ -24,148 +25,133 @@ namespace Envoy {
 namespace Platform {
 
 // The C++ Engine builder creates a structured bootstrap proto and modifies it through parameters
-// set through the EngineBuilder API calls to produce the Bootstrap config that the Engine is
+// set through the MobileEngineBuilder API calls to produce the Bootstrap config that the Engine is
 // created from.
-class EngineBuilder {
+class MobileEngineBuilder : public Platform::EngineBuilderBase<MobileEngineBuilder> {
 public:
-  EngineBuilder();
-  EngineBuilder(EngineBuilder&&) = default;
-  virtual ~EngineBuilder() = default;
+  MobileEngineBuilder();
+  MobileEngineBuilder(MobileEngineBuilder&&) = default;
+  virtual ~MobileEngineBuilder() = default;
   static std::string nativeNameToConfig(absl::string_view name);
 
-  EngineBuilder& setLogLevel(Logger::Logger::Levels log_level);
-  EngineBuilder& setLogger(std::unique_ptr<EnvoyLogger> logger);
-  EngineBuilder& enableLogger(bool logger_on);
-  EngineBuilder& setEngineCallbacks(std::unique_ptr<EngineCallbacks> callbacks);
-  EngineBuilder& setOnEngineRunning(absl::AnyInvocable<void()> closure);
-  EngineBuilder& setOnEngineExit(absl::AnyInvocable<void()> closure);
-  EngineBuilder& setEventTracker(std::unique_ptr<EnvoyEventTracker> event_tracker);
-  EngineBuilder& addConnectTimeoutSeconds(int connect_timeout_seconds);
-  EngineBuilder& addDnsRefreshSeconds(int dns_refresh_seconds);
-  EngineBuilder& addDnsFailureRefreshSeconds(int base, int max);
-  EngineBuilder& addDnsQueryTimeoutSeconds(int dns_query_timeout_seconds);
-  EngineBuilder& setDisableDnsRefreshOnFailure(bool disable_dns_refresh_on_failure);
-  EngineBuilder& setDisableDnsRefreshOnNetworkChange(bool disable_dns_refresh_on_network_change);
-  EngineBuilder& addDnsMinRefreshSeconds(int dns_min_refresh_seconds);
-  EngineBuilder& setDnsNumRetries(uint32_t dns_num_retries);
-  EngineBuilder& setGetaddrinfoNumThreads(uint32_t num_threads);
-  EngineBuilder& addMaxConnectionsPerHost(int max_connections_per_host);
-  EngineBuilder& addH2ConnectionKeepaliveIdleIntervalMilliseconds(
+  MobileEngineBuilder& addConnectTimeoutSeconds(int connect_timeout_seconds);
+  MobileEngineBuilder& addDnsRefreshSeconds(int dns_refresh_seconds);
+  MobileEngineBuilder& addDnsFailureRefreshSeconds(int base, int max);
+  MobileEngineBuilder& addDnsQueryTimeoutSeconds(int dns_query_timeout_seconds);
+  MobileEngineBuilder& setDisableDnsRefreshOnFailure(bool disable_dns_refresh_on_failure);
+  MobileEngineBuilder&
+  setDisableDnsRefreshOnNetworkChange(bool disable_dns_refresh_on_network_change);
+
+  MobileEngineBuilder& addDnsMinRefreshSeconds(int dns_min_refresh_seconds);
+  MobileEngineBuilder& setDnsNumRetries(uint32_t dns_num_retries);
+  MobileEngineBuilder& setGetaddrinfoNumThreads(uint32_t num_threads);
+  MobileEngineBuilder& addMaxConnectionsPerHost(int max_connections_per_host);
+  MobileEngineBuilder& addH2ConnectionKeepaliveIdleIntervalMilliseconds(
       int h2_connection_keepalive_idle_interval_milliseconds);
-  EngineBuilder&
+  MobileEngineBuilder&
   addH2ConnectionKeepaliveTimeoutSeconds(int h2_connection_keepalive_timeout_seconds);
-  // Configures Envoy to use the PlatformBridge filter named `name`. An instance of
-  // envoy_http_filter must be registered as a platform API with the same name.
-  EngineBuilder& setAppVersion(std::string app_version);
-  EngineBuilder& setAppId(std::string app_id);
-  EngineBuilder& setDeviceOs(std::string app_id);
-  EngineBuilder& setStreamIdleTimeoutSeconds(int stream_idle_timeout_seconds);
-  EngineBuilder& setPerTryIdleTimeoutSeconds(int per_try_idle_timeout_seconds);
-  EngineBuilder& enableGzipDecompression(bool gzip_decompression_on);
-  EngineBuilder& enableBrotliDecompression(bool brotli_decompression_on);
-  EngineBuilder& enableSocketTagging(bool socket_tagging_on);
-  EngineBuilder& enableHttp3(bool http3_on);
-  // If true, all HTTP requests are handled on a dedicated worker thread instead of on the Envoy
-  // main thread which also handles all xDS requests.
-  // Note: Engine in worker thread model doesn't support platform certificate validation and system
-  // proxy settings. And these settings will be ignored if worker thread model is enabled.
-  EngineBuilder& enableWorkerThread(bool use_worker_thread);
-  EngineBuilder& enableEarlyData(bool early_data_on);
-  EngineBuilder& enableScone(bool enable);
-  EngineBuilder& addQuicConnectionOption(std::string option);
-  EngineBuilder& addQuicClientConnectionOption(std::string option);
+  MobileEngineBuilder& setAppVersion(std::string app_version);
+  MobileEngineBuilder& setAppId(std::string app_id);
+  MobileEngineBuilder& setDeviceOs(std::string app_id);
+
+  MobileEngineBuilder& setPerTryIdleTimeoutSeconds(int per_try_idle_timeout_seconds);
+  MobileEngineBuilder& enableGzipDecompression(bool gzip_decompression_on);
+  MobileEngineBuilder& enableBrotliDecompression(bool brotli_decompression_on);
+  MobileEngineBuilder& enableSocketTagging(bool socket_tagging_on);
+  MobileEngineBuilder& enableHttp3(bool http3_on);
+  MobileEngineBuilder& enableEarlyData(bool early_data_on);
+  MobileEngineBuilder& enableScone(bool enable);
+  MobileEngineBuilder& addQuicConnectionOption(std::string option);
+  MobileEngineBuilder& addQuicClientConnectionOption(std::string option);
   // Deprecated, use addQuicConnectionOption() instead.
-  EngineBuilder& setHttp3ConnectionOptions(std::string options);
+  MobileEngineBuilder& setHttp3ConnectionOptions(std::string options);
   // Deprecated, use addQuicClientConnectionOption() instead.
-  EngineBuilder& setHttp3ClientConnectionOptions(std::string options);
-  EngineBuilder& addQuicHint(std::string host, int port);
-  EngineBuilder& addQuicCanonicalSuffix(std::string suffix);
+  MobileEngineBuilder& setHttp3ClientConnectionOptions(std::string options);
+  MobileEngineBuilder& addQuicHint(std::string host, int port);
+  MobileEngineBuilder& addQuicCanonicalSuffix(std::string suffix);
   // 0 means port migration is disabled.
-  EngineBuilder& setNumTimeoutsToTriggerPortMigration(int num_timeouts);
-  EngineBuilder& enableInterfaceBinding(bool interface_binding_on);
-  EngineBuilder& enableDrainPostDnsRefresh(bool drain_post_dns_refresh_on);
-  EngineBuilder& setUdpSocketReceiveBufferSize(int32_t size);
-  EngineBuilder& setUdpSocketSendBufferSize(int32_t size);
-  EngineBuilder& enforceTrustChainVerification(bool trust_chain_verification_on);
-  EngineBuilder& setUpstreamTlsSni(std::string sni);
-  EngineBuilder& enablePlatformCertificatesValidation(bool platform_certificates_validation_on);
-  EngineBuilder& setUseQuicPlatformPacketWriter(bool use_quic_platform_packet_writer);
+  MobileEngineBuilder& setNumTimeoutsToTriggerPortMigration(int num_timeouts);
+  MobileEngineBuilder& enableInterfaceBinding(bool interface_binding_on);
+  MobileEngineBuilder& enableDrainPostDnsRefresh(bool drain_post_dns_refresh_on);
+  MobileEngineBuilder& setUdpSocketReceiveBufferSize(int32_t size);
+  MobileEngineBuilder& setUdpSocketSendBufferSize(int32_t size);
+  MobileEngineBuilder& enforceTrustChainVerification(bool trust_chain_verification_on);
+  MobileEngineBuilder& setUpstreamTlsSni(std::string sni);
+  MobileEngineBuilder&
+  enablePlatformCertificatesValidation(bool platform_certificates_validation_on);
+  // Overridden to turn off system proxying and platform certs validation while enabling worker
+  // thread.
+  MobileEngineBuilder& enableWorkerThread(bool use_worker_thread);
+  MobileEngineBuilder& setUseQuicPlatformPacketWriter(bool use_quic_platform_packet_writer);
   // If called to enable QUIC connection migration, no need to call setUseQuicPlatformPacketWriter()
   // separately.
-  EngineBuilder& enableQuicConnectionMigration(bool quic_connection_migration_on);
-  EngineBuilder& setMigrateIdleQuicConnection(bool migrate_idle_quic_connection);
+  MobileEngineBuilder& enableQuicConnectionMigration(bool quic_connection_migration_on);
+  MobileEngineBuilder& setMigrateIdleQuicConnection(bool migrate_idle_quic_connection);
   // 0 means using the Envoy default 30s.
-  EngineBuilder& setMaxIdleTimeBeforeQuicMigrationSeconds(int max_idle_time_before_quic_migration);
+  MobileEngineBuilder&
+  setMaxIdleTimeBeforeQuicMigrationSeconds(int max_idle_time_before_quic_migration);
   // 0 means using the Envoy default 128s.
-  EngineBuilder& setMaxTimeOnNonDefaultNetworkSeconds(int max_time_on_non_default_network);
+  MobileEngineBuilder& setMaxTimeOnNonDefaultNetworkSeconds(int max_time_on_non_default_network);
 
-  EngineBuilder& enableDnsCache(bool dns_cache_on, int save_interval_seconds = 1);
+  MobileEngineBuilder& enableDnsCache(bool dns_cache_on, int save_interval_seconds = 1);
   // Set additional socket options on the upstream cluster outbound sockets.
-  EngineBuilder& setAdditionalSocketOptions(
+  MobileEngineBuilder& setAdditionalSocketOptions(
       const std::vector<envoy::config::core::v3::SocketOption>& socket_options);
   // Adds the hostnames that should be pre-resolved by DNS prior to the first request issued for
   // that host. When invoked, any previous preresolve hostname entries get cleared and only the ones
   // provided in the hostnames argument get set.
   // TODO(abeyad): change this method and the other language APIs to take a {host,port} pair.
   // E.g. addDnsPreresolveHost(std::string host, uint32_t port);
-  EngineBuilder& addDnsPreresolveHostnames(const std::vector<std::string>& hostnames);
-  EngineBuilder&
+  MobileEngineBuilder& addDnsPreresolveHostnames(const std::vector<std::string>& hostnames);
+  MobileEngineBuilder&
   setDnsResolver(const envoy::config::core::v3::TypedExtensionConfig& dns_resolver_config);
-  EngineBuilder& addNativeFilter(std::string name, std::string typed_config);
-  EngineBuilder& addNativeFilter(const std::string& name, const Protobuf::Any& typed_config);
+  MobileEngineBuilder& addNativeFilter(std::string name, std::string typed_config);
+  MobileEngineBuilder& addNativeFilter(const std::string& name, const Protobuf::Any& typed_config);
 
-  EngineBuilder& addPlatformFilter(const std::string& name);
+  MobileEngineBuilder& addPlatformFilter(const std::string& name);
   // Adds a runtime guard for the `envoy.reloadable_features.<guard>`.
   // For example if the runtime guard is `envoy.reloadable_features.use_foo`, the guard name is
   // `use_foo`.
-  EngineBuilder& addRuntimeGuard(std::string guard, bool value);
-  // Adds a runtime guard for the `envoy.restart_features.<guard>`. Restart features cannot be
-  // changed after the Envoy applicable has started and initialized.
-  // For example if the runtime guard is `envoy.restart_features.use_foo`, the guard name is
-  // `use_foo`.
-  EngineBuilder& addRestartRuntimeGuard(std::string guard, bool value);
+  MobileEngineBuilder& addRuntimeGuard(std::string guard, bool value);
 
   // These functions don't affect the Bootstrap configuration but instead perform registrations.
-  EngineBuilder& addKeyValueStore(std::string name, KeyValueStoreSharedPtr key_value_store);
-  EngineBuilder& addStringAccessor(std::string name, StringAccessorSharedPtr accessor);
+  MobileEngineBuilder& addKeyValueStore(std::string name, KeyValueStoreSharedPtr key_value_store);
+  MobileEngineBuilder& addStringAccessor(std::string name, StringAccessorSharedPtr accessor);
 
   // Sets the thread priority of the Envoy main (network) thread.
   // The value must be an integer between -20 (highest priority) and 19 (lowest priority). Values
   // outside of this range will be ignored.
-  EngineBuilder& setNetworkThreadPriority(int thread_priority);
-  // Sets the high watermark for the response buffer. The low watermark is set to half of this
-  // value. Defaults to 2MB if not set.
-  EngineBuilder& setBufferHighWatermark(size_t high_watermark);
+  MobileEngineBuilder& setNetworkThreadPriority(int thread_priority);
 
   // Sets the QUIC connection idle timeout in seconds.
-  EngineBuilder& setQuicConnectionIdleTimeoutSeconds(int quic_connection_idle_timeout_seconds);
+  MobileEngineBuilder&
+  setQuicConnectionIdleTimeoutSeconds(int quic_connection_idle_timeout_seconds);
 
   // Sets the QUIC connection keepalive initial interval in nanoseconds
-  EngineBuilder& setKeepAliveInitialIntervalMilliseconds(int keepalive_initial_interval_ms);
+  MobileEngineBuilder& setKeepAliveInitialIntervalMilliseconds(int keepalive_initial_interval_ms);
 
   // Sets the maximum number of concurrent streams on a multiplexed connection (HTTP/2 or HTTP/3).
-  EngineBuilder& setMaxConcurrentStreams(int max_concurrent_streams);
+  MobileEngineBuilder& setMaxConcurrentStreams(int max_concurrent_streams);
 
   // Sets the node.id field in the Bootstrap configuration.
-  EngineBuilder& setNodeId(std::string node_id);
+  MobileEngineBuilder& setNodeId(std::string node_id);
   // Sets the node.locality field in the Bootstrap configuration.
-  EngineBuilder& setNodeLocality(std::string region, std::string zone, std::string sub_zone);
+  MobileEngineBuilder& setNodeLocality(std::string region, std::string zone, std::string sub_zone);
   // Sets the node.metadata field in the Bootstrap configuration.
-  EngineBuilder& setNodeMetadata(Protobuf::Struct node_metadata);
-  // Sets whether to collect Envoy's internal stats (counters & guages). Off by default.
-  EngineBuilder& enableStatsCollection(bool stats_collection_on);
+  MobileEngineBuilder& setNodeMetadata(Protobuf::Struct node_metadata);
+
 #if defined(__APPLE__)
   // If true, initialize the platform network change monitor to listen for network change events.
   // Only takes effect on iOS, where it is required in order to enable the network change monitor.
   // Defaults to false.
-  EngineBuilder& enableNetworkChangeMonitor(bool network_change_monitor_on);
+  MobileEngineBuilder& enableNetworkChangeMonitor(bool network_change_monitor_on);
 #endif
 
 #ifdef ENVOY_MOBILE_XDS
   // Sets the xDS configuration for the Envoy Mobile engine.
   //
   // `xds_builder`: the XdsBuilder instance used to specify the xDS configuration options.
-  EngineBuilder& setXds(XdsBuilder xds_builder);
+  MobileEngineBuilder& setXds(XdsBuilder xds_builder);
 #endif // ENVOY_MOBILE_XDS
 
 #if defined(__APPLE__)
@@ -176,16 +162,36 @@ public:
   // The optional `refresh_interval_secs` parameter determines how often the system proxy settings
   // are polled by the operating system; defaults to 10 seconds. If the value is <= 0, the default
   // value will be used.
-  EngineBuilder& respectSystemProxySettings(bool value, int refresh_interval_secs = 10);
-  EngineBuilder& setIosNetworkServiceType(int ios_network_service_type);
+  MobileEngineBuilder& respectSystemProxySettings(bool value, int refresh_interval_secs = 10);
+  MobileEngineBuilder& setIosNetworkServiceType(int ios_network_service_type);
 #endif
-
-  // This is separated from build() for the sake of testability
-  virtual std::unique_ptr<envoy::config::bootstrap::v3::Bootstrap> generateBootstrap() const;
-
+  // Overload to preserve the same return type as the EngineBuilder class.
   EngineSharedPtr build();
 
 private:
+  friend class Platform::EngineBuilderBase<MobileEngineBuilder>;
+
+  // base class hooks
+  void preRunSetup(InternalEngine* engine);
+  void postRunSetup(Engine* engine);
+  absl::Status configXds(envoy::config::bootstrap::v3::Bootstrap* bootstrap);
+  void configureDnsCache(
+      envoy::extensions::common::dynamic_forward_proxy::v3::DnsCacheConfig* dns_cache_config) const;
+  absl::Status configureNode(envoy::config::core::v3::Node* node);
+  absl::Status configureRouteConfig(envoy::config::route::v3::RouteConfiguration* route_config);
+  absl::Status configureStaticClusters(
+      Protobuf::RepeatedPtrField<envoy::config::cluster::v3::Cluster>* clusters);
+  absl::Status configureHttpFilters(
+      std::function<envoy::extensions::filters::network::http_connection_manager::v3::HttpFilter*()>
+          add_filter);
+  void configureCustomRouterFilter(
+      ::envoy::extensions::filters::http::router::v3::Router& router_config) {
+    (void)router_config;
+  }
+
+  void addWatchdog();
+  void addStatsInclusionStringMatchers();
+
   struct NativeFilterConfig {
     NativeFilterConfig(std::string name, std::string typed_config)
         : name_(std::move(name)), textproto_typed_config_(std::move(typed_config)) {}
@@ -197,12 +203,6 @@ private:
     std::string textproto_typed_config_{};
     Protobuf::Any typed_config_{};
   };
-
-  Logger::Logger::Levels log_level_ = Logger::Logger::Levels::info;
-  std::unique_ptr<EnvoyLogger> logger_{nullptr};
-  bool enable_logger_{true};
-  std::unique_ptr<EngineCallbacks> callbacks_;
-  std::unique_ptr<EnvoyEventTracker> event_tracker_{nullptr};
 
   int connect_timeout_seconds_ = 10;
   int dns_refresh_seconds_ = 60;
@@ -218,7 +218,6 @@ private:
   std::string app_version_ = "unspecified";
   std::string app_id_ = "unspecified";
   std::string device_os_ = "unspecified";
-  int stream_idle_timeout_seconds_ = 15;
   int per_try_idle_timeout_seconds_ = 15;
   bool gzip_decompression_filter_ = true;
   bool brotli_decompression_filter_ = false;
@@ -227,7 +226,6 @@ private:
   bool dns_cache_on_ = false;
   int dns_cache_save_interval_seconds_ = 1;
   absl::optional<int> network_thread_priority_ = absl::nullopt;
-  absl::optional<size_t> high_watermark_ = absl::nullopt;
 
   absl::flat_hash_map<std::string, KeyValueStoreSharedPtr> key_value_stores_{};
 
@@ -259,8 +257,6 @@ private:
   absl::optional<envoy::config::core::v3::TypedExtensionConfig> dns_resolver_config_;
   std::vector<envoy::config::core::v3::SocketOption> socket_options_;
 
-  std::vector<std::pair<std::string, bool>> runtime_guards_;
-  std::vector<std::pair<std::string, bool>> restart_runtime_guards_;
   absl::flat_hash_map<std::string, StringAccessorSharedPtr> string_accessors_;
 
   // This is the same value Cronet uses for QUIC:
@@ -289,16 +285,14 @@ private:
   std::string node_id_;
   absl::optional<NodeLocality> node_locality_ = absl::nullopt;
   absl::optional<Protobuf::Struct> node_metadata_ = absl::nullopt;
-  bool enable_stats_collection_ = true;
-  bool use_worker_thread_{false};
-  bool enable_network_change_monitor_{false};
 
+  bool enable_network_change_monitor_ = false;
 #ifdef ENVOY_MOBILE_XDS
   absl::optional<XdsBuilder> xds_builder_ = absl::nullopt;
 #endif // ENVOY_MOBILE_XDS
 };
 
-using EngineBuilderSharedPtr = std::shared_ptr<EngineBuilder>;
+using MobileEngineBuilderSharedPtr = std::shared_ptr<MobileEngineBuilder>;
 
 } // namespace Platform
 } // namespace Envoy
