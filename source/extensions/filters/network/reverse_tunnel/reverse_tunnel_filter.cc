@@ -48,6 +48,15 @@ Extensions::Bootstrap::ReverseConnection::UpstreamSocketManager* getThreadLocalS
   return tls_registry->socketManager();
 }
 
+class RequestDecoderHandleImpl : public Http::RequestDecoderHandle {
+public:
+  explicit RequestDecoderHandleImpl(Http::RequestDecoder& decoder) : decoder_(decoder) {}
+  OptRef<Http::RequestDecoder> get() override { return decoder_; }
+
+private:
+  Http::RequestDecoder& decoder_;
+};
+
 } // namespace
 
 // Stats helper implementation.
@@ -332,7 +341,7 @@ AccessLog::InstanceSharedPtrVector ReverseTunnelFilter::RequestDecoderImpl::acce
 }
 
 Http::RequestDecoderHandlePtr ReverseTunnelFilter::RequestDecoderImpl::getRequestDecoderHandle() {
-  return nullptr;
+  return std::make_unique<RequestDecoderHandleImpl>(*this);
 }
 
 void ReverseTunnelFilter::RequestDecoderImpl::processIfComplete(bool end_stream) {
